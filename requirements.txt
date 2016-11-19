@@ -1,0 +1,2 @@
+requests
+pyyamlconfig>=0.2.0
