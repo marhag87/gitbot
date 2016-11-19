@@ -1,2 +1,3 @@
 requests
 pyyamlconfig>=0.2.0
+git+https://github.com/Rapptz/discord.py

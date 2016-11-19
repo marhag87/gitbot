@@ -22,6 +22,7 @@ def events(user, repo):
             'body': json.loads(response.text)
         }
     else:
+        print(response.status_code)
         return None
 
 
@@ -32,7 +33,7 @@ def new_events(repo):
         repo.get('repo'),
     )
     if all_events is None:
-        return ([], repo)
+        return [], repo
 
     latest = repo.get('latest')
     repo_etag = repo.get('ETag')
@@ -46,22 +47,49 @@ def new_events(repo):
                 my_new_events.append(event)
         repo['latest'] = latest
 
-    return (my_new_events, repo)
+    return my_new_events, repo
 
 
 def parse_event(event):
     event_type = event.get('type')
 
     if event_type == 'PullRequestEvent':
-        return (
-            'New pull request from {user}:\n'
-            '{url}'.format(
-                user=event.get('actor', {}).get('login'),
-                url=event.get('payload', {}).get('pull_request', {}).get('html_url'),
-            ))
+        action = event.get('payload', {}).get('action')
+        if action == 'opened':
+            return (
+                'New pull request from {user}:\n'
+                '{url}'.format(
+                    user=event.get('actor', {}).get('login'),
+                    url=event.get('payload', {}).get('pull_request', {}).get('html_url'),
+                ))
+        elif action == 'closed':
+            if event.get('payload', {}).get('pull_request', {}).get('merged'):
+                return (
+                    'Merged pull request:\n'
+                    '{url}'.format(
+                        url=event.get('payload', {}).get('pull_request', {}).get('html_url'),
+                    )
+                )
+            else:
+                return (
+                    'Pull request closed:\n'
+                    '{url}'.format(
+                        url=event.get('payload', {}).get('pull_request', {}).get('html_url'),
+                    )
+                )
+        else:
+            return "Action {} for event {} not implemented".format(
+                action,
+                event_type,
+            )
 
     elif event_type == 'PushEvent':
-        message = ['New code has been pushed:', '```']
+        message = [
+            'New code has been pushed to {repo}:'.format(
+                repo=event.get('repo', {}).get('name'),
+            ),
+            '```',
+        ]
         for commit in reversed(event.get('payload').get('commits')):
             message.append(
                 commit.get('message').split('\n\n')[0]  # First line of commit message
@@ -71,11 +99,12 @@ def parse_event(event):
 
     elif event_type == 'IssueCommentEvent':
         return (
-            'New comment from {user}:\n'
+            'New comment from {user} in {repo}:\n'
             '```\n'
             '{comment}\n'
             '```'.format(
                 user=event.get('actor', {}).get('display_login'),
+                repo=event.get('repo', {}).get('name'),
                 comment=event.get('payload', {}).get('comment', {}).get('body'),
             )
         )
