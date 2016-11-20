@@ -10,12 +10,23 @@ class GitbotError(Exception):
     pass
 
 
-def events(user, repo):
+def events(user, repo, etag=None):
+    response = requests.get(
+        'https://api.github.com/rate_limit',
+    )
+    if response.headers.get('X-RateLimit-Remaining') == '0':
+        raise GitbotError('Out of ratelimit tokens')
+
+    if etag is not None:
+        headers = {'If-None-Match': etag}
+    else:
+        headers = {}
     response = requests.get(
         'https://api.github.com/repos/{}/{}/events'.format(
             user,
             repo,
-        )
+        ),
+        headers=headers,
     )
     if response.status_code == 200:
         return {
@@ -25,6 +36,8 @@ def events(user, repo):
             'X-RateLimit-Reset': response.headers.get('X-RateLimit-Reset'),
             'body': json.loads(response.text)
         }
+    if response.status_code == 304:
+        return None  # 304 = Not modified
     else:
         if response.headers.get('X-RateLimit-Remaining') == '0':
             raise GitbotError('Out of ratelimit tokens')
@@ -39,6 +52,7 @@ def new_events(repo):
     all_events = events(
         repo.get('user'),
         repo.get('repo'),
+        repo.get('ETag'),
     )
     if all_events is None:
         return [], repo
