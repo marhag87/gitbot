@@ -94,6 +94,13 @@ def handle_list(channel):
     return content
 
 
+def handle_source():
+    """
+    Handle showing source
+    """
+    return ['https://www.github.com/marhag87/gitbot']
+
+
 def handle_help():
     """
     Handle printing help
@@ -107,6 +114,8 @@ def handle_help():
         '    Unregister a repo',
         '  @gitbot list',
         '    List repos that are registered',
+        '  @gitbot source',
+        '    Print link to source',
         '',
         'REPO should be in the form USERNAME/REPOSITORY',
         '```',
@@ -125,6 +134,8 @@ async def on_message(message):
             content = handle_remove(full_repo, message.channel.id)
         elif message.content.startswith('<@{}> list'.format(_CLIENT.user.id)):
             content = handle_list(message.channel.id)
+        elif message.content.startswith('<@{}> source'.format(_CLIENT.user.id)):
+            content = handle_source()
         else:
             content = handle_help()
 
