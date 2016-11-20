@@ -63,15 +63,14 @@ def new_events(repo, token=None):
     if all_events is None:
         return [], repo
 
-    latest = repo.get('latest')
+    latest = int(repo.get('latest'))
     repo_etag = repo.get('ETag')
     etag = all_events.get('ETag')
     if repo_etag is None or repo_etag != etag:
         repo['ETag'] = etag
         for event in reversed(all_events.get('body')):
-            updated_at = datetime.strptime(event.get('created_at'), '%Y-%m-%dT%H:%M:%SZ')
-            if latest is None or updated_at >= latest:
-                latest = updated_at
+            if latest is None or int(event.get('id')) > latest:
+                latest = event.get('id')
                 my_new_events.append(event)
         repo['latest'] = latest
 
