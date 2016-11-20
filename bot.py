@@ -47,73 +47,93 @@ async def on_ready():
     print(discord.utils.oauth_url(_CONFIG.get('clientid'), permissions=perms))
 
 
+def handle_add(full_repo, channel):
+    """
+    Handle adding repo
+    """
+    if full_repo == 'add':
+        content = ['You need to specify a repo']
+    else:
+        try:
+            add_repo(full_repo, channel)
+            content = ['Added repo {}']
+        except BotError as err:
+            content = ['Could not add repo, {}'.format(
+                err,
+            )]
+    return content
+
+
+def handle_remove(full_repo, channel):
+    """
+    Handle removing repo
+    """
+    if full_repo == 'remove':
+        content = ['You need to specify a repo']
+    else:
+        try:
+            remove_repo(full_repo, channel)
+            content = ['Removed repo {}']
+        except BotError as err:
+            content = ['Could not remove repo, {}'.format(
+                err,
+            )]
+    return content
+
+
+def handle_list(channel):
+    """
+    Handle listing repos
+    """
+    content = ['The following repos are active in this channel:']
+    repos = list_repos(channel)
+    if repos:
+        content += repos
+    else:
+        content = ['There are not repos active in this channel']
+    return content
+
+
+def handle_help():
+    """
+    Handle printing help
+    """
+    return [
+        '```',
+        'Usage:',
+        '  @gitbot add REPO [EVENT]...',
+        '    Register a repo for updates, by default all events will trigger an update',
+        '  @gitbot remove REPO',
+        '    Unregister a repo',
+        '  @gitbot list',
+        '    List repos that are registered',
+        '',
+        'REPO should be in the form USERNAME/REPOSITORY',
+        '```',
+    ]
+
 @_CLIENT.event
 async def on_message(message):
     """
     Handle messages that are posted in a channel
     """
     if _CLIENT.user in message.mentions:
+        full_repo = message.content.split(' ')[-1]
         if message.content.startswith('<@{}> add'.format(_CLIENT.user.id)):
-            full_repo = message.content.split(' ')[-1]
-            if full_repo == 'add':
-                content = ['You need to specify a repo']
-            else:
-                try:
-                    add_repo(full_repo, message.channel.id)
-                    content = ['Added repo {}']
-                except BotError as err:
-                    content = ['Could not add repo, {}'.format(
-                        err,
-                    )]
-            await _CLIENT.send_message(
-                message.channel,
-                '\n'.join(content).format(full_repo),
-            )
+            content = handle_add(full_repo, message.channel.id)
         elif message.content.startswith('<@{}> remove'.format(_CLIENT.user.id)):
-            full_repo = message.content.split(' ')[-1]
-            if full_repo == 'remove':
-                content = ['You need to specify a repo']
-            else:
-                try:
-                    remove_repo(full_repo, message.channel.id)
-                    content = ['Removed repo {}']
-                except BotError as err:
-                    content = ['Could not remove repo, {}'.format(
-                        err,
-                    )]
-            await _CLIENT.send_message(
-                message.channel,
-                '\n'.join(content).format(full_repo),
-            )
+            content = handle_remove(full_repo, message.channel.id)
         elif message.content.startswith('<@{}> list'.format(_CLIENT.user.id)):
-            content = ['The following repos are active in this channel:']
-            repos = list_repos(message.channel.id)
-            if repos:
-                content += repos
-            else:
-                content = ['There are not repos active in this channel']
-            await _CLIENT.send_message(
-                message.channel,
-                '\n'.join(content),
-            )
+            content = handle_list(message.channel.id)
         else:
-            content = [
-                '```',
-                'Usage:',
-                '  @gitbot add REPO [EVENT]...',
-                '    Register a repo for updates, by default all events will trigger an update',
-                '  @gitbot remove REPO',
-                '    Unregister a repo',
-                '  @gitbot list',
-                '    List repos that are registered',
-                '',
-                'REPO should be in the form USERNAME/REPOSITORY',
-                '```',
-            ]
-            await _CLIENT.send_message(
-                message.channel,
-                "\n".join(content),
-            )
+            content = handle_help()
+
+        await _CLIENT.send_message(
+            message.channel,
+            '\n'.join(
+                content,
+            ).format(full_repo),
+        )
 
 
 def add_repo(full_repo, channel):
