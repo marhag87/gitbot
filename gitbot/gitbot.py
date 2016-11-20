@@ -114,8 +114,11 @@ def handle_push_event(event):
         '```',
     ]
     for commit in reversed(event.payload.commits):
+        comment = commit.get('message').split('\n\n')[0]  # First line of commit message
+        comment = comment.replace('{', '{{')  # Clean up comments so that they don't get formated
+        comment = comment.replace('}', '}}')
         full_message.append(
-            commit.get('message').split('\n\n')[0]  # First line of commit message
+            comment,
         )
     full_message.append('```')
     return '\n'.join(full_message)
