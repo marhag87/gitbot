@@ -112,7 +112,7 @@ def handle_push_event(event):
     Handle PushEvent
     """
     full_message = [
-        'New code has been pushed to {repo} {ref}:',
+        'New code has been pushed to {repo}, {ref} branch:',
         '```',
     ]
     for commit in reversed(event.payload.commits):

@@ -37,6 +37,12 @@ class Payload(GitEvent):
     def comment(self):
         return Comment(self._key.get('comment'))
 
+    @property
+    def ref(self):
+        ref = self._key.get('ref')
+        ref = ref.replace('refs/heads/', '')
+        return ref
+
 
 class Actor(GitEvent):
     pass
