@@ -77,6 +77,17 @@ async def on_message(message):
                 message.channel,
                 content.format(full_repo),
             )
+        elif message.content.startswith('<@{}> list'.format(_CLIENT.user.id)):
+            content = ['The following repos are active in this channel:']
+            repos = list_repos(message.channel.id)
+            if repos:
+                content += repos
+            else:
+                content = ['There are not repos active in this channel']
+            await _CLIENT.send_message(
+                message.channel,
+                '\n'.join(content),
+            )
         else:
             content = [
                 '```',
@@ -156,13 +167,12 @@ def remove_repo(full_repo, channel):
     )
 
 
+def list_repos(channel):
+    return ['{}/{}'.format(x.get('user'), x.get('repo')) for x in _CONFIG.get('repos', []) if channel in x.get('channels')]
+
+
 def reset_etag():
     pass
-
-
-def out(message):
-    print(message)
-    print('-------------------------')
 
 
 async def main_loop():
