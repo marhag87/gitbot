@@ -56,34 +56,34 @@ async def on_message(message):
         if message.content.startswith('<@{}> add'.format(_CLIENT.user.id)):
             full_repo = message.content.split(' ')[-1]
             if full_repo == 'add':
-                content = 'You need to specify a repo'
+                content = ['You need to specify a repo']
             else:
                 try:
                     add_repo(full_repo, message.channel.id)
-                    content = 'Added repo {}'
+                    content = ['Added repo {}']
                 except BotError as err:
-                    content = 'Could not add repo, {}'.format(
+                    content = ['Could not add repo, {}'.format(
                         err,
-                    )
+                    )]
             await _CLIENT.send_message(
                 message.channel,
-                content.format(full_repo),
+                '\n'.join(content).format(full_repo),
             )
         elif message.content.startswith('<@{}> remove'.format(_CLIENT.user.id)):
             full_repo = message.content.split(' ')[-1]
             if full_repo == 'remove':
-                content = 'You need to specify a repo'
+                content = ['You need to specify a repo']
             else:
                 try:
                     remove_repo(full_repo, message.channel.id)
-                    content = 'Removed repo {}'
+                    content = ['Removed repo {}']
                 except BotError as err:
-                    content = 'Could not remove repo, {}'.format(
+                    content = ['Could not remove repo, {}'.format(
                         err,
-                    )
+                    )]
             await _CLIENT.send_message(
                 message.channel,
-                content.format(full_repo),
+                '\n'.join(content).format(full_repo),
             )
         elif message.content.startswith('<@{}> list'.format(_CLIENT.user.id)):
             content = ['The following repos are active in this channel:']
