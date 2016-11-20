@@ -175,7 +175,7 @@ def parse_event(event):
     else:
         message = 'Event not implemented: {type}'
 
-    return '\n'.join(message).format(
+    return message.format(
         user=my_event.actor.display_login,
         url=my_event.payload.pull_request.html_url,
         pull_request=my_event.payload.pull_request.number,
