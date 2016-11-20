@@ -137,5 +137,24 @@ def parse_event(event):
             )
         )
 
+    elif event_type == 'CreateEvent':
+        if event.get('payload', {}).get('ref_type') == 'branch':
+            return (
+                'Branch {branch} created in repo {repo}'.format(
+                    branch=event.get('payload', {}).get('ref'),
+                    repo=event.get('repo', {}).get('name'),
+                )
+            )
+        elif event.get('payload', {}).get('ref_type') == 'repository':
+            return (
+                'Repository created: {repo}'.format(
+                    repo=event.get('repo', {}).get('name'),
+                )
+            )
+        else:
+            return 'CreateEvent not implemented for ref_type {}'.format(
+                event.get('payload', {}).get('ref_type'),
+            )
+
     else:
         return "Event not implemented: {}".format(event_type)

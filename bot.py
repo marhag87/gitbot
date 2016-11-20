@@ -143,7 +143,7 @@ def add_repo(full_repo, channel):
         _CONFIGFILE,
         _CONFIG,
     )
-    reset_etag()
+    fetch_updates()
 
 
 def remove_repo(full_repo, channel):
@@ -171,40 +171,50 @@ def list_repos(channel):
     return ['{}/{}'.format(x.get('user'), x.get('repo')) for x in _CONFIG.get('repos', []) if channel in x.get('channels')]
 
 
-def reset_etag():
-    pass
+def fetch_updates():
+    content = []
+    new_config = {
+        'token': _CONFIG.get('token'),
+        'clientid': _CONFIG.get('clientid'),
+        'github-token': _CONFIG.get('github-token'),
+        'repos': [],
+    }
+    try:
+        for repo in _CONFIG.get('repos', []):
+            (newevents, repo) = new_events(repo, token=_CONFIG.get('github-token'))
+            new_config['repos'].append(repo)
+            for event in newevents:
+                if event.get('type') in repo.get('events', []) or repo.get('events') is None:
+                    for channel in repo.get('channels'):
+                        content.append(
+                            {
+                                'message': parse_event(event),
+                                'channel': channel,
+                            }
+                        )
+
+        write_config(
+            _CONFIGFILE,
+            new_config,
+        )
+        return content
+    except GitbotError as err:
+        print('Could not fetch events: {}'.format(err))
 
 
 async def main_loop():
     await _CLIENT.wait_until_ready()
     while not _CLIENT.is_closed:
         await asyncio.sleep(_SLEEPTIME)
-        new_config = {
-            'token': _CONFIG.get('token'),
-            'clientid': _CONFIG.get('clientid'),
-            'github-token': _CONFIG.get('github-token'),
-            'repos': [],
-        }
-        try:
-            for repo in _CONFIG.get('repos', []):
-                (newevents, repo) = new_events(repo, token=_CONFIG.get('github-token'))
-                new_config['repos'].append(repo)
-                for event in newevents:
-                    if event.get('type') in repo.get('events', []) or repo.get('events') is None:
-                        for channel in repo.get('channels'):
-                            message = parse_event(event)
-                            await _CLIENT.send_message(
-                                _CLIENT.get_channel(channel),
-                                message,
-                            )
+        for content in fetch_updates():
+            message = content.get('message')
+            if message is not None:
+                await _CLIENT.send_message(
+                    _CLIENT.get_channel(content.get('channel')),
+                    message,
+                )
 
-            write_config(
-                _CONFIGFILE,
-                new_config,
-            )
-        except GitbotError as err:
-            print('Could not fetch events: {}'.format(err))
 
-reset_etag()
+fetch_updates()
 _CLIENT.loop.create_task(main_loop())
 _CLIENT.run(_CONFIG.get('token'))
