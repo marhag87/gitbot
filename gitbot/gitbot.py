@@ -50,6 +50,8 @@ def events(user, repo, etag=None, token=None):
         }
     if response.status_code == 304:
         return None  # 304 = Not modified
+    elif response.status_code == 404:
+        raise GitbotError('repo does not exist')
     else:
         if response.headers.get('X-RateLimit-Remaining') == '0':
             raise GitbotError('Out of ratelimit tokens')
