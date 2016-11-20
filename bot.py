@@ -182,11 +182,12 @@ async def main_loop():
         new_config = {
             'token': _CONFIG.get('token'),
             'clientid': _CONFIG.get('clientid'),
+            'github-token': _CONFIG.get('github-token'),
             'repos': [],
         }
         try:
             for repo in _CONFIG.get('repos', []):
-                (newevents, repo) = new_events(repo)
+                (newevents, repo) = new_events(repo, token=_CONFIG.get('github-token'))
                 new_config['repos'].append(repo)
                 for event in newevents:
                     if event.get('type') in repo.get('events', []) or repo.get('events') is None:
