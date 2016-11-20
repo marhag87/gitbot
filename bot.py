@@ -5,6 +5,7 @@ from gitbot import (
     events,
     new_events,
     parse_event,
+    GitbotError,
 )
 from pyyamlconfig import (
     load_config,
@@ -44,9 +45,9 @@ async def on_ready():
 @_CLIENT.event
 async def on_message(message):
     if _CLIENT.user in message.mentions:
-        if message.content.startswith('<@{}> register'.format(_CLIENT.user.id)):
+        if message.content.startswith('<@{}> add'.format(_CLIENT.user.id)):
             full_repo = message.content.split(' ')[-1]
-            if full_repo == 'register':
+            if full_repo == 'add':
                 content = 'You need to specify a repo'
             else:
                 try:
@@ -60,13 +61,29 @@ async def on_message(message):
                 message.channel,
                 content.format(full_repo),
             )
+        elif message.content.startswith('<@{}> remove'.format(_CLIENT.user.id)):
+            full_repo = message.content.split(' ')[-1]
+            if full_repo == 'remove':
+                content = 'You need to specify a repo'
+            else:
+                try:
+                    remove_repo(full_repo, message.channel.id)
+                    content = 'Removed repo {}'
+                except BotError as err:
+                    content = 'Could not remove repo, {}'.format(
+                        err,
+                    )
+            await _CLIENT.send_message(
+                message.channel,
+                content.format(full_repo),
+            )
         else:
             content = [
                 '```',
                 'Usage:',
-                '  @gitbot register REPO [EVENT]...',
+                '  @gitbot add REPO [EVENT]...',
                 '    Register a repo for updates, by default all events will trigger an update',
-                '  @gitbot unregister REPO',
+                '  @gitbot remove REPO',
                 '    Unregister a repo',
                 '  @gitbot list',
                 '    List repos that are registered',
@@ -86,8 +103,11 @@ def add_repo(full_repo, channel):
         repo = full_repo.split('/')[1]
     except IndexError:
         raise BotError('not a valid repo format')
-    if not isinstance(events(user, repo), dict):
-        raise BotError('it does not exist')
+    try:
+        if not isinstance(events(user, repo), dict):
+            raise BotError('it does not exist')
+    except GitbotError as err:
+        raise BotError(err)
     repo_exists = False
     for config_repo in _CONFIG.get('repos', []):
         if config_repo.get('user') == user and config_repo.get('repo') == repo:
@@ -115,6 +135,27 @@ def add_repo(full_repo, channel):
     reset_etag()
 
 
+def remove_repo(full_repo, channel):
+    try:
+        user = full_repo.split('/')[0]
+        repo = full_repo.split('/')[1]
+    except IndexError:
+        raise BotError('not a valid repo format')
+    for config_repo in _CONFIG.get('repos', []):
+        if config_repo.get('user') == user \
+                and config_repo.get('repo') == repo \
+                and channel in config_repo.get('channels'):
+            if config_repo.get('channels') == [channel]:
+                _CONFIG['repos'] = [x for x in _CONFIG.get('repos') if not (x.get('user') == user and x.get('repo') == repo)]
+            else:
+                config_repo['channels'].remove(channel)
+
+    write_config(
+        _CONFIGFILE,
+        _CONFIG,
+    )
+
+
 def reset_etag():
     pass
 
@@ -133,22 +174,26 @@ async def main_loop():
             'clientid': _CONFIG.get('clientid'),
             'repos': [],
         }
-        for repo in _CONFIG.get('repos', []):
-            (events, repo) = new_events(repo)
-            new_config['repos'].append(repo)
-            for event in events:
-                if event.get('type') in repo.get('events', []) or repo.get('events') is None:
-                    for channel in repo.get('channels'):
-                        message = parse_event(event)
-                        await _CLIENT.send_message(
-                            _CLIENT.get_channel(channel),
-                            message,
-                        )
+        try:
+            for repo in _CONFIG.get('repos', []):
+                (newevents, repo) = new_events(repo)
+                new_config['repos'].append(repo)
+                for event in newevents:
+                    if event.get('type') in repo.get('events', []) or repo.get('events') is None:
+                        for channel in repo.get('channels'):
+                            message = parse_event(event)
+                            await _CLIENT.send_message(
+                                _CLIENT.get_channel(channel),
+                                message,
+                            )
 
-        write_config(
-            _CONFIGFILE,
-            new_config,
-        )
+            write_config(
+                _CONFIGFILE,
+                new_config,
+            )
+        except GitbotError as err:
+            print('Could not fetch events: {}'.format(err))
 
+reset_etag()
 _CLIENT.loop.create_task(main_loop())
 _CLIENT.run(_CONFIG.get('token'))

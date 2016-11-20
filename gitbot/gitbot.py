@@ -6,6 +6,10 @@ import json
 from datetime import datetime
 
 
+class GitbotError(Exception):
+    pass
+
+
 def events(user, repo):
     response = requests.get(
         'https://api.github.com/repos/{}/{}/events'.format(
@@ -22,8 +26,12 @@ def events(user, repo):
             'body': json.loads(response.text)
         }
     else:
-        print(response.status_code)
-        return None
+        if response.headers.get('X-RateLimit-Remaining') == '0':
+            raise GitbotError('Out of ratelimit tokens')
+        else:
+            raise GitbotError('Unknown error, status code {}'.format(
+                response.status_code,
+            ))
 
 
 def new_events(repo):
