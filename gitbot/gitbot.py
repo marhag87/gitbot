@@ -94,104 +94,66 @@ def parse_event(event):
     my_event = Event(event)
     if my_event.type == 'PullRequestEvent':
         if my_event.payload.action == 'opened':
-            return (
-                'New pull request from {user}:\n'
-                '{url}'.format(
-                    user=my_event.actor.login,
-                    url=my_event.payload.pull_request.html_url,
-                ))
+            message = 'New pull request from {user}:\n{url}'
         elif my_event.payload.action == 'closed':
             if my_event.payload.pull_request.merged:
-                return (
-                    'Merged pull request:\n'
-                    '{url}'.format(
-                        url=my_event.payload.pull_request.html_url,
-                    )
-                )
+                message = 'Merged Pull request #{pull_request} ({title}) in {repo}'
             else:
-                return (
-                    'Pull request #{pull_request} ({title}) closed for {repo}'.format(
-                        pull_request=my_event.payload.pull_request.number,
-                        title=my_event.payload.pull_request.title,
-                        repo=my_event.repo.name,
-                    )
-                )
+                message = 'Pull request #{pull_request} ({title}) closed for {repo}'
         elif my_event.payload.action == 'reopened':
-            return (
-                'Pull request #{pull_request} ({title}) reopened for {repo}'.format(
-                    pull_request=my_event.payload.pull_request.number,
-                    title=my_event.payload.pull_request.title,
-                    repo=my_event.repo.name,
-                )
-            )
+            message = 'Pull request #{pull_request} ({title}) reopened for {repo}'
         else:
-            return "Action {} for event {} not implemented".format(
-                my_event.payload.action,
-                my_event.type,
-            )
+            message = 'Action {action} for event {type} not implemented'
 
     elif my_event.type == 'PushEvent':
-        message = [
-            'New code has been pushed to {repo} {ref}:'.format(
-                repo=my_event.repo.name,
-                ref=my_event.payload.ref,
-            ),
+        full_message = [
+            'New code has been pushed to {repo} {ref}:',
             '```',
         ]
         for commit in reversed(my_event.payload.commits):
-            message.append(
+            full_message.append(
                 commit.get('message').split('\n\n')[0]  # First line of commit message
             )
-        message.append('```')
-        return "\n".join(message)
+        full_message.append('```')
+        message = '\n'.join(full_message)
 
     elif my_event.type == 'IssueCommentEvent':
-        return (
-            'New comment from {user} in Pull Request #{pull_request} ({title}) for {repo}:\n'
+        message = (
+            'New comment from {user} in Pull Request #{issue_number} ({issue_title}) for {repo}:\n'
             '```\n'
             '{comment}\n'
-            '```'.format(
-                user=my_event.actor.display_login,
-                pull_request=my_event.payload.issue.number,
-                title=my_event.payload.issue.title,
-                repo=my_event.repo.name,
-                comment=my_event.payload.comment.body,
-            )
+            '```\n'
         )
 
     elif my_event.type == 'CreateEvent':
         if my_event.payload.ref_type == 'branch':
-            return (
-                'Branch {branch} created in repo {repo}'.format(
-                    branch=my_event.payload.ref,
-                    repo=my_event.repo.name,
-                )
-            )
+            message = 'Branch {branch} created in repo {repo}'
         elif my_event.payload.ref_type == 'repository':
-            return (
-                'Repository created: {repo}'.format(
-                    repo=my_event.repo.name,
-                )
-            )
+            message = 'Repository created: {repo}'
         else:
-            return 'CreateEvent not implemented for ref_type {ref_type}'.format(
-                ref_type=my_event.payload.ref_type,
-            )
+            message = 'CreateEvent not implemented for ref_type {ref_type}'
 
     elif my_event.type == 'DeleteEvent':
         if my_event.payload.ref_type == 'branch':
-            return (
-                'Branch {branch} deleted from repo {repo}'.format(
-                    branch=my_event.payload.ref,
-                    repo=my_event.repo.name,
-                )
-            )
+            message = 'Branch {branch} deleted from repo {repo}'
         else:
-            return 'DeleteEvent not implemented for ref_type {ref_type}'.format(
-                ref_type=my_event.payload.ref_type,
-            )
+            message = 'DeleteEvent not implemented for ref_type {ref_type}'
 
     else:
-        return "Event not implemented: {type}".format(
-            type=my_event.type,
-        )
+        message = 'Event not implemented: {type}'
+
+    return '\n'.join(message).format(
+        user=my_event.actor.display_login,
+        url=my_event.payload.pull_request.html_url,
+        pull_request=my_event.payload.pull_request.number,
+        title=my_event.payload.pull_request.title,
+        repo=my_event.repo.name,
+        action=my_event.payload.action,
+        type=my_event.type,
+        ref=my_event.payload.ref,
+        ref_type=my_event.payload.ref_type,
+        issue_number=my_event.payload.issue.number,
+        issue_title=my_event.payload.issue.title,
+        comment=my_event.payload.comment.body,
+        branch=my_event.payload.ref,
+    )

@@ -3,7 +3,11 @@ class GitEvent(object):
         self._key = key
 
     def __getattr__(self, item):
-        return self._key.get(item)
+        try:
+            attribute = self._key.get(item)
+        except AttributeError:
+            attribute = None
+        return attribute
 
 
 class Event(GitEvent):
