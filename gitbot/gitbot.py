@@ -87,58 +87,91 @@ def new_events(repo, token=None):
     return my_new_events, repo
 
 
+def handle_pull_request_event(event):
+    """
+    Handle PullRequestEvent
+    """
+    if event.payload.action == 'opened':
+        message = 'New pull request from {user}:\n{url}'
+    elif event.payload.action == 'closed':
+        if event.payload.pull_request.merged:
+            message = 'Merged Pull request #{pull_request} ({title}) in {repo}'
+        else:
+            message = 'Pull request #{pull_request} ({title}) closed for {repo}'
+    elif event.payload.action == 'reopened':
+        message = 'Pull request #{pull_request} ({title}) reopened for {repo}'
+    else:
+        message = 'Action {action} for event {type} not implemented'
+    return message
+
+
+def handle_push_event(event):
+    """
+    Handle PushEvent
+    """
+    full_message = [
+        'New code has been pushed to {repo} {ref}:',
+        '```',
+    ]
+    for commit in reversed(event.payload.commits):
+        full_message.append(
+            commit.get('message').split('\n\n')[0]  # First line of commit message
+        )
+    full_message.append('```')
+    return '\n'.join(full_message)
+
+
+def handle_issue_comment_event():
+    """
+    Handle IssueCommentEvent
+    """
+    return (
+        'New comment from {user} in Pull Request #{issue_number} ({issue_title}) for {repo}:\n'
+        '```\n'
+        '{comment}\n'
+        '```\n'
+    )
+
+
+def handle_create_event(event):
+    """
+    Handle CreateEvent
+    """
+    if event.payload.ref_type == 'branch':
+        message = 'Branch {branch} created in repo {repo}'
+    elif event.payload.ref_type == 'repository':
+        message = 'Repository created: {repo}'
+    else:
+        message = 'CreateEvent not implemented for ref_type {ref_type}'
+    return message
+
+
+def handle_delete_event(event):
+    """
+    Handle DeleteEvent
+    """
+    if event.payload.ref_type == 'branch':
+        message = 'Branch {branch} deleted from repo {repo}'
+    else:
+        message = 'DeleteEvent not implemented for ref_type {ref_type}'
+    return message
+
+
 def parse_event(event):
     """
     Parse an event, return some text for printing
     """
     my_event = Event(event)
     if my_event.type == 'PullRequestEvent':
-        if my_event.payload.action == 'opened':
-            message = 'New pull request from {user}:\n{url}'
-        elif my_event.payload.action == 'closed':
-            if my_event.payload.pull_request.merged:
-                message = 'Merged Pull request #{pull_request} ({title}) in {repo}'
-            else:
-                message = 'Pull request #{pull_request} ({title}) closed for {repo}'
-        elif my_event.payload.action == 'reopened':
-            message = 'Pull request #{pull_request} ({title}) reopened for {repo}'
-        else:
-            message = 'Action {action} for event {type} not implemented'
-
+        message = handle_pull_request_event(my_event)
     elif my_event.type == 'PushEvent':
-        full_message = [
-            'New code has been pushed to {repo} {ref}:',
-            '```',
-        ]
-        for commit in reversed(my_event.payload.commits):
-            full_message.append(
-                commit.get('message').split('\n\n')[0]  # First line of commit message
-            )
-        full_message.append('```')
-        message = '\n'.join(full_message)
-
+        message = handle_push_event(my_event)
     elif my_event.type == 'IssueCommentEvent':
-        message = (
-            'New comment from {user} in Pull Request #{issue_number} ({issue_title}) for {repo}:\n'
-            '```\n'
-            '{comment}\n'
-            '```\n'
-        )
-
+        message = handle_issue_comment_event()
     elif my_event.type == 'CreateEvent':
-        if my_event.payload.ref_type == 'branch':
-            message = 'Branch {branch} created in repo {repo}'
-        elif my_event.payload.ref_type == 'repository':
-            message = 'Repository created: {repo}'
-        else:
-            message = 'CreateEvent not implemented for ref_type {ref_type}'
-
+        message = handle_create_event(my_event)
     elif my_event.type == 'DeleteEvent':
-        if my_event.payload.ref_type == 'branch':
-            message = 'Branch {branch} deleted from repo {repo}'
-        else:
-            message = 'DeleteEvent not implemented for ref_type {ref_type}'
-
+        message = handle_delete_event(my_event)
     else:
         message = 'Event not implemented: {type}'
 
