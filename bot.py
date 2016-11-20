@@ -1,4 +1,3 @@
-from pprint import pprint
 import asyncio
 import discord
 from gitbot import (

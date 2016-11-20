@@ -3,7 +3,6 @@ Gitbot
 """
 import requests
 import json
-from datetime import datetime
 
 
 class GitbotError(Exception):
@@ -25,7 +24,7 @@ def events(user, repo, etag=None, token=None):
         raise GitbotError('Out of ratelimit tokens')
 
     if etag is not None:
-        headers['If-None-Match']= etag
+        headers['If-None-Match'] = etag
     response = requests.get(
         'https://api.github.com/repos/{}/{}/events'.format(
             user,
@@ -112,8 +111,9 @@ def parse_event(event):
 
     elif event_type == 'PushEvent':
         message = [
-            'New code has been pushed to {repo}:'.format(
+            'New code has been pushed to {repo} {ref}:'.format(
                 repo=event.get('repo', {}).get('name'),
+                ref=event.get('payload', {}).get('ref'),
             ),
             '```',
         ]
@@ -126,11 +126,13 @@ def parse_event(event):
 
     elif event_type == 'IssueCommentEvent':
         return (
-            'New comment from {user} in {repo}:\n'
+            'New comment from {user} in Pull Request #{pull_request_number} ({title}) for {repo}:\n'
             '```\n'
             '{comment}\n'
             '```'.format(
                 user=event.get('actor', {}).get('display_login'),
+                pull_request_number=event.get('payload', {}).get('issue', {}).get('number'),
+                title=event.get('payload', {}).get('issue', {}).get('title'),
                 repo=event.get('repo', {}).get('name'),
                 comment=event.get('payload', {}).get('comment', {}).get('body'),
             )
@@ -152,6 +154,19 @@ def parse_event(event):
             )
         else:
             return 'CreateEvent not implemented for ref_type {}'.format(
+                event.get('payload', {}).get('ref_type'),
+            )
+
+    elif event_type == 'DeleteEvent':
+        if event.get('payload', {}).get('ref_type') == 'branch':
+            return (
+                'Branch {branch} deleted from repo {repo}'.format(
+                    branch=event.get('payload', {}).get('ref'),
+                    repo=event.get('repo', {}).get('name'),
+                )
+            )
+        else:
+            return 'DeleteEvent not implemented for ref_type {}'.format(
                 event.get('payload', {}).get('ref_type'),
             )
 
