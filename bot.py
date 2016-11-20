@@ -1,3 +1,6 @@
+"""
+Gitbot
+"""
 import asyncio
 import discord
 from gitbot import (
@@ -14,6 +17,9 @@ from pyyamlconfig import (
 
 
 class BotError(Exception):
+    """
+    Generic Bot Error
+    """
     pass
 
 
@@ -43,6 +49,9 @@ async def on_ready():
 
 @_CLIENT.event
 async def on_message(message):
+    """
+    Handle messages that are posted in a channel
+    """
     if _CLIENT.user in message.mentions:
         if message.content.startswith('<@{}> add'.format(_CLIENT.user.id)):
             full_repo = message.content.split(' ')[-1]
@@ -108,6 +117,9 @@ async def on_message(message):
 
 
 def add_repo(full_repo, channel):
+    """
+    Add a repo, write config to file and update ETag and latest
+    """
     try:
         user = full_repo.split('/')[0]
         repo = full_repo.split('/')[1]
@@ -146,6 +158,9 @@ def add_repo(full_repo, channel):
 
 
 def remove_repo(full_repo, channel):
+    """
+    Remove a repo, write config to file
+    """
     try:
         user = full_repo.split('/')[0]
         repo = full_repo.split('/')[1]
@@ -156,7 +171,14 @@ def remove_repo(full_repo, channel):
                 and config_repo.get('repo') == repo \
                 and channel in config_repo.get('channels'):
             if config_repo.get('channels') == [channel]:
-                _CONFIG['repos'] = [x for x in _CONFIG.get('repos') if not (x.get('user') == user and x.get('repo') == repo)]
+                _CONFIG['repos'] = [
+                    x
+                    for
+                    x
+                    in
+                    _CONFIG.get('repos')
+                    if not (x.get('user') == user and x.get('repo') == repo)
+                    ]
             else:
                 config_repo['channels'].remove(channel)
 
@@ -167,10 +189,22 @@ def remove_repo(full_repo, channel):
 
 
 def list_repos(channel):
-    return ['{}/{}'.format(x.get('user'), x.get('repo')) for x in _CONFIG.get('repos', []) if channel in x.get('channels')]
+    """
+    Return a list of repos that are active for a channel
+    """
+    return [
+        '{}/{}'.format(x.get('user'), x.get('repo'))
+        for
+        x
+        in _CONFIG.get('repos', [])
+        if channel in x.get('channels')
+        ]
 
 
 def fetch_updates():
+    """
+    Fetch all changes that have happened for repos
+    """
     content = []
     new_config = {
         'token': _CONFIG.get('token'),
@@ -202,6 +236,9 @@ def fetch_updates():
 
 
 async def main_loop():
+    """
+    Main loop that listens for changes and prints them to relevant channels
+    """
     await _CLIENT.wait_until_ready()
     while not _CLIENT.is_closed:
         await asyncio.sleep(_SLEEPTIME)

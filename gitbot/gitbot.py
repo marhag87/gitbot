@@ -62,13 +62,13 @@ def new_events(repo, token=None):
     if all_events is None:
         return [], repo
 
-    latest = int(repo.get('latest'))
+    latest = repo.get('latest')
     repo_etag = repo.get('ETag')
     etag = all_events.get('ETag')
     if repo_etag is None or repo_etag != etag:
         repo['ETag'] = etag
         for event in reversed(all_events.get('body')):
-            if latest is None or int(event.get('id')) > latest:
+            if latest is None or int(event.get('id')) > int(latest):
                 latest = event.get('id')
                 my_new_events.append(event)
         repo['latest'] = latest
@@ -78,7 +78,6 @@ def new_events(repo, token=None):
 
 def parse_event(event):
     event_type = event.get('type')
-
     if event_type == 'PullRequestEvent':
         action = event.get('payload', {}).get('action')
         if action == 'opened':
@@ -98,11 +97,20 @@ def parse_event(event):
                 )
             else:
                 return (
-                    'Pull request closed:\n'
-                    '{url}'.format(
-                        url=event.get('payload', {}).get('pull_request', {}).get('html_url'),
+                    'Pull request #{pull_request_number} ({title}) closed for {repo}'.format(
+                        pull_request_number=event.get('payload', {}).get('pull_request', {}).get('number'),
+                        title=event.get('payload', {}).get('pull_request', {}).get('title'),
+                        repo=event.get('repo', {}).get('name'),
                     )
                 )
+        elif action == 'reopened':
+            return (
+                'Pull request #{pull_request_number} ({title}) reopened for {repo}'.format(
+                    pull_request_number=event.get('payload', {}).get('pull_request', {}).get('number'),
+                    title=event.get('payload', {}).get('pull_request', {}).get('title'),
+                    repo=event.get('repo', {}).get('name'),
+                )
+            )
         else:
             return "Action {} for event {} not implemented".format(
                 action,
