@@ -122,6 +122,7 @@ def handle_help():
         '```',
     ]
 
+
 @_CLIENT.event
 async def on_message(message):
     """

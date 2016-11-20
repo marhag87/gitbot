@@ -162,6 +162,17 @@ def handle_delete_event(event):
     return message
 
 
+def handle_member_event(event):
+    """
+    Handle MemberEvent
+    """
+    if event.payload.action == 'added':
+        message = '{user} added member {payload_user} to repo {repo}'
+    else:
+        message = 'MemberEvent not implemented for action {action}'
+    return message
+
+
 def parse_event(event):
     """
     Parse an event, return some text for printing
@@ -177,6 +188,8 @@ def parse_event(event):
         message = handle_create_event(my_event)
     elif my_event.type == 'DeleteEvent':
         message = handle_delete_event(my_event)
+    elif my_event.type == 'MemberEvent':
+        message = handle_member_event(my_event)
     else:
         message = 'Event not implemented: {type}'
 
@@ -194,4 +207,5 @@ def parse_event(event):
         issue_title=my_event.payload.issue.title,
         comment=my_event.payload.comment.body,
         branch=my_event.payload.ref,
+        payload_user=my_event.payload.member.login,
     )

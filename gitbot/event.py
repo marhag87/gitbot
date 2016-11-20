@@ -38,6 +38,10 @@ class Payload(GitEvent):
         return Comment(self._key.get('comment'))
 
     @property
+    def member(self):
+        return Member(self._key.get('member'))
+
+    @property
     def ref(self):
         ref = self._key.get('ref')
         ref = ref.replace('refs/heads/', '')
@@ -61,4 +65,8 @@ class PullRequest(GitEvent):
 
 
 class Comment(GitEvent):
+    pass
+
+
+class Member(GitEvent):
     pass
